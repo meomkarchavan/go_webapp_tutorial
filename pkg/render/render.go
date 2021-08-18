@@ -7,27 +7,45 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"web_app/pkg/config"
+	"web_app/pkg/models"
 )
 
 var functions = template.FuncMap{}
 
-// RenderTemplate renders a template
-func RenderTemplate(w http.ResponseWriter, tmpl string) {
-	tc, err := CreateTemplateCache()
-	if err != nil {
-		fmt.Println("Error ", err)
-	}
+var app *config.AppConfig
 
+func NewTemplates(a *config.AppConfig) {
+	app = a
+
+}
+
+func AddDefaultData(td *models.TemplateData) *models.TemplateData {
+	return td
+}
+
+// RenderTemplate renders a template
+func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+	var tc map[string]*template.Template
+
+	if app.UseCache {
+		tc = app.TemplateCache
+
+	} else {
+		tc, _ = CreateTemplateCache()
+
+	}
 	template, ok := tc[tmpl]
 	if !ok {
-		log.Fatal(err)
+		log.Fatal("Can't Load Template Cache")
 
 	}
 
 	buf := new(bytes.Buffer)
-	_ = template.Execute(buf, nil)
+	td = AddDefaultData(td)
+	_ = template.Execute(buf, td)
 
-	_, err = buf.WriteTo(w)
+	_, err := buf.WriteTo(w)
 
 	if err != nil {
 		log.Fatal(err)
